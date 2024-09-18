@@ -31,7 +31,7 @@
           <h1>Welcome, please type booking ref number</h1>
           <p-inputGroup>
             <input [(ngModel)]="bookingId" pInputText type="text"/>
-            <button (click)="searchBooking()" [disabled]="loading || (bookingId?.trim()?.length || 0) == 0"
+            <button (click)="searchBooking()" [disabled]="loading || (bookingId.trim().length || 0) == 0"
                     [loading]="loading"
                     label="Search" pButton severity="contrast"
                     type="button"></button>
@@ -58,7 +58,7 @@
                     <span class="font-semibold mr-6">Drop off address</span>
                     <span>{{ bookingInfo.booking.dropoff_address }}</span>
                   </div>
-                  @if (viaPoints?.length) {
+                  @if (viaPoints.length) {
                     <div class="flex justify-content-between align-items-center mb-2">
                       <span class="font-semibold mr-6">Via</span>
                       <div class="text-end">
