@@ -1,5 +1,5 @@
 export const environment = {
-  apiUrl: 'https://testapi.devonexpresstravel.com/',
+  apiUrl: 'https://api.devonexpresstravel.com/',
   stripePublicKey: 'pk_test_2LhhXcHKJGaMjMJvEPBwQ9cn00Gl581Dq8',
   google: {
     clientId: '205199243094-d2832c8d7g5phe44kg8pk958veq738sf.apps.googleusercontent.com'
