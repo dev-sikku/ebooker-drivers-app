@@ -1,0 +1,68 @@
+.login-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  text-align: center;
+}
+
+.login-form h2 {
+  margin-bottom: 20px;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.separator hr {
+  flex-grow: 1;
+  border: none;
+  border-top: 1px solid #ccc;
+}
+
+.separator span {
+  margin: 0 10px;
+  color: #999;
+}
+
+.continue-button {
+  text-align: center;
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  gap: 5rem;
+}
+
+::ng-deep {
+  .p-button.p-button-link {
+    color: var(--surface-900);
+  }
+
+  .iti--inline-dropdown {
+    width: 100%;
+  }
+}
+
+
+.congratulations-card {
+  text-align: center;
+  padding: 2rem;
+  margin: 11rem auto;
+
+  .icon-container {
+    background-color: #00c853;
+    border-radius: 50%;
+    width: 4rem;
+    height: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+
+    i {
+      color: #fff;
+      font-size: 2rem;
+    }
+  }
+}
+

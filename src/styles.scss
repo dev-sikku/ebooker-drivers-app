@@ -1,0 +1,48 @@
+@import "primeng/resources/themes/aura-light-blue/theme.css";
+@import "primeng/resources/primeng.css";
+@import "primeicons/primeicons.css";
+@import "primeflex/primeflex.scss";
+
+body {
+  background-color: #f6f6f6;
+  margin: 0;
+}
+
+.error-message {
+  color: #ff4546;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.w-45 {
+  width: 45%;
+}
+
+.app-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.align-center {
+  align-content: center;
+}
+
+.text-start {
+  text-align: start;
+}
+
+.justify-content-space-between {
+  justify-content: space-between;
+}
+
+.justify-content-end {
+  justify-content: end;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-end {
+  text-align: end;
+}

@@ -1,0 +1,285 @@
+@if (completed()) {
+  <div class="congratulations-card">
+    <div class="icon-container">
+      <i class="pi pi-check-circle"></i>
+    </div>
+    <h2>Congratulations!</h2>
+    <p>You're all set.</p>
+  </div>
+} @else {
+  @if (authType() == authTypeEnum.register) {
+    <div class="login-container">
+      <h1 class="text-start">Sign up</h1>
+      <div [formGroup]="registerForm"
+           class="login-form {{registerStep == registerSteps.VerifyPhoneNumber ? '' : 'hidden'}}">
+        <h3 class="text-start">What's your phone number?</h3>
+        <div class="w-full text-start mb-4">
+          <input
+            (value)="setPhoneNumber($event,authTypeEnum.register)"
+            appIntelPhoneFormatter
+            autocomplete="off"
+            class="w-full py-3 {{(registerFC.phoneNumber.invalid && (registerFC.phoneNumber.dirty || !registerFC.phoneNumber.untouched || !mobileNumberValid)) ? 'ng-invalid ng-dirty' : ''}}"
+            formControlName="phoneNumber"
+            inputmode="numeric"
+            pInputText
+          />
+          @if (registerFC.phoneNumber.invalid && (registerFC.phoneNumber.dirty || !registerFC.phoneNumber.untouched)) {
+            <small class="error-message sz-text">Please enter phone number</small>
+          } @else if (!mobileNumberValid) {
+            <small class="error-message sz-text">Please enter valid phone number</small>
+          }
+        </div>
+        <p-button (onClick)="requestOtp()"
+                  [disabled]="registerFC.phoneNumber.invalid || !mobileNumberValid || loading()"
+                  [loading]="loading()"
+                  label="Continue"
+                  severity="contrast" styleClass="w-full p-3"/>
+        <div class="flex py-1">
+          <span>Already have an account?</span>
+          <p-button (onClick)="authType.set(authTypeEnum.login)" [disabled]="loading()" styleClass="ml-1 p-0"
+                    label=" Login here"
+                    [link]="true"/>
+        </div>
+        <div class="separator">
+          <hr>
+          <span>or</span>
+          <hr>
+        </div>
+        <div>
+          <ng-template [ngTemplateOutlet]="googleSignInTemplate"></ng-template>
+        </div>
+      </div>
+      <div class="{{registerStep == registerSteps.VerifyOTP ? '' : 'hidden'}}">
+        <h2 class="text-start">Enter the 4-digit code sent to you at: {{ registerFC.formattedPhoneNumber.value }}</h2>
+        <div class="w-full mb-4">
+          <p-inputOtp [(ngModel)]="otp" [integerOnly]="true"/>
+        </div>
+        <div class="flex justify-content-space-between continue-button">
+          <button (click)="registerStep = registerSteps.VerifyPhoneNumber" [disabled]="loading()"
+                  class="p-button-secondary"
+                  pButton
+                  type="button">
+            <span class="rotate-180">➔</span> &nbsp;
+            Back
+          </button>
+
+          <button
+            (click)="validateOtp()"
+            [disabled]="otp.length < 4 || loading()"
+            [loading]="loading()"
+            class="p-button-contrast"
+            pButton
+            type="button">
+            @if (loading()) {
+              &nbsp;
+            }
+            Next
+            <span class="rotate"> &nbsp; ➔</span>
+          </button>
+        </div>
+      </div>
+      <div [formGroup]="registerForm" class="{{registerStep == registerSteps.CreatePassword ? '' : 'hidden'}}">
+        <h2 class="text-start">Create your account password</h2>
+        <div class="text-start mb-4 w-full">
+          <p-password [toggleMask]="true" formControlName="password"
+                      inputStyleClass="w-full p-3 {{(registerFC.password.invalid && (registerFC.password.dirty || !registerFC.password.untouched)) ? 'ng-invalid ng-dirty' : ''}}"
+                      placeholder="Enter your password"
+                      styleClass="w-full"/>
+          @if (registerFC.password.invalid && (registerFC.password.dirty || !registerFC.password.untouched)) {
+            @if (registerFC.password.errors && registerFC.password.errors['minlength']) {
+              <small class="error-message sz-text">Password should be 8 characters long</small>
+            } @else {
+              <small class="error-message sz-text">Please enter password</small>
+            }
+          }
+        </div>
+        <div class="flex justify-content-space-between continue-button">
+          <button
+            (click)="registerStep = registerSteps.Name"
+            [disabled]="registerFC.password.invalid"
+            class="p-button-contrast"
+            pButton
+            type="button">
+            Next
+            <span class="rotate"> &nbsp; ➔</span>
+          </button>
+        </div>
+      </div>
+      <div [formGroup]="registerForm" class="{{registerStep == registerSteps.Name ? '' : 'hidden'}}">
+        <h2 class="text-start">What's your name?</h2>
+        <div class="text-start mb-2">
+          <input
+            class="w-full p-3 {{(registerFC.firstName.invalid && (registerFC.firstName.dirty || !registerFC.firstName.untouched)) ? 'ng-invalid ng-dirty' : ''}}"
+            formControlName="firstName" pInputText
+            placeholder="Enter first name" type="text">
+          @if (registerFC.firstName.invalid && (registerFC.firstName.dirty || !registerFC.firstName.untouched)) {
+            <small class="error-message sz-text">Please enter first name</small>
+          }
+        </div>
+        <div class="text-start mb-4">
+          <input
+            class="w-full p-3 {{(registerFC.lastName.invalid && (registerFC.lastName.dirty || !registerFC.lastName.untouched)) ? 'ng-invalid ng-dirty' : ''}}"
+            formControlName="lastName" pInputText
+            placeholder="Enter last name" type="text">
+          @if (registerFC.lastName.invalid && (registerFC.lastName.dirty || !registerFC.lastName.untouched)) {
+            <small class="error-message sz-text">Please enter last name</small>
+          }
+        </div>
+        <div class="flex justify-content-space-between continue-button">
+          <button (click)="registerStep = registerSteps.CreatePassword" [disabled]="loading()"
+                  class="p-button-secondary"
+                  pButton
+                  type="button">
+            <span class="rotate-180">➔</span> &nbsp;
+            Back
+          </button>
+
+          <button
+            (click)="register()"
+            [disabled]="registerFC.firstName.invalid || registerFC.lastName.invalid || loading()"
+            [loading]="loading()"
+            class="p-button-contrast"
+            pButton
+            type="button">
+            @if (loading()) {
+              &nbsp;
+            }
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else if (authType() == authTypeEnum.login) {
+    <div class="login-container">
+      <h1 class="text-start">Login</h1>
+      <div [formGroup]="loginForm" class="login-form">
+        <h3 class="text-start">What's your phone number?</h3>
+        <div class="w-full text-start mb-2">
+          <input
+            (value)="setPhoneNumber($event,authTypeEnum.login)"
+            appIntelPhoneFormatter
+            autocomplete="off"
+            class="w-full py-3 {{(loginFC.phoneNumber.invalid && (loginFC.phoneNumber.dirty || !loginFC.phoneNumber.untouched || !loginMobileNumberValid)) ? 'ng-invalid ng-dirty' : ''}}"
+            formControlName="phoneNumber"
+            inputmode="numeric"
+            pInputText
+          />
+          @if (loginFC.phoneNumber.invalid && (loginFC.phoneNumber.dirty || !loginFC.phoneNumber.untouched)) {
+            <small class="error-message sz-text">Please enter phone number</small>
+          } @else if (!loginMobileNumberValid) {
+            <small class="error-message sz-text">Please enter valid phone number</small>
+          }
+        </div>
+        <div class="text-start mb-4 w-full">
+          <p-password [toggleMask]="true" formControlName="password"
+                      [feedback]="false"
+                      inputStyleClass="w-full p-3 {{(loginFC.password.invalid && (loginFC.password.dirty || !loginFC.password.untouched)) ? 'ng-invalid ng-dirty' : ''}}"
+                      placeholder="Enter your password"
+                      styleClass="w-full"/>
+          @if (loginFC.password.invalid && (loginFC.password.dirty || !loginFC.password.untouched)) {
+            <small class="error-message sz-text">Please enter password</small>
+          }
+        </div>
+        <p-button (onClick)="login()" [disabled]="loginForm.invalid || loading()"
+                  [loading]="loading()"
+                  label="Continue"
+                  severity="contrast" styleClass="w-full p-3"/>
+        <div class="flex justify-content-space-between">
+          <p-button [disabled]="loading()" styleClass="px-0" (onClick)="authType.set(authTypeEnum.register)"
+                    label="Create new account"
+                    [link]="true"/>
+          <p-button [disabled]="loading()" styleClass="px-0" (onClick)="authType.set(authTypeEnum.otpLogin)"
+                    label="Login using OTP"
+                    [link]="true"/>
+        </div>
+
+        <div class="separator">
+          <hr>
+          <span>or</span>
+          <hr>
+        </div>
+        <div>
+          <ng-template [ngTemplateOutlet]="googleSignInTemplate"></ng-template>
+        </div>
+      </div>
+    </div>
+  } @else if (authType() == authTypeEnum.otpLogin) {
+    <div class="login-container">
+      <h1 class="text-start">Login using OTP</h1>
+      <div class="{{otpLoginStep == optLoginSteps.VerifyPhoneNumber ? '':'hidden'}}">
+        <div [formGroup]="otpLoginForm" class="login-form">
+          <h3 class="text-start">What's your phone number?</h3>
+          <div class="w-full text-start mb-4">
+            <input
+              (value)="setPhoneNumber($event,authTypeEnum.otpLogin)"
+              appIntelPhoneFormatter
+              autocomplete="off"
+              class="w-full py-3 {{(otpLoginFC.phoneNumber.invalid && (otpLoginFC.phoneNumber.dirty || !otpLoginFC.phoneNumber.untouched || !otpLoginMobileNumberValid)) ? 'ng-invalid ng-dirty' : ''}}"
+              formControlName="phoneNumber"
+              inputmode="numeric"
+              pInputText
+            />
+            @if (otpLoginFC.phoneNumber.invalid && (otpLoginFC.phoneNumber.dirty || !otpLoginFC.phoneNumber.untouched)) {
+              <small class="error-message sz-text">Please enter phone number</small>
+            } @else if (!otpLoginMobileNumberValid) {
+              <small class="error-message sz-text">Please enter valid phone number</small>
+            }
+          </div>
+          <p-button (onClick)="loginWithOtp()" [disabled]="otpLoginForm.invalid || loading()"
+                    [loading]="loading()"
+                    label="Continue"
+                    severity="contrast" styleClass="w-full p-3"/>
+        </div>
+        <div class="separator">
+          <hr>
+          <span>or</span>
+          <hr>
+        </div>
+        <div>
+          <p-button [disabled]="loading()" [outlined]="true" (onClick)="authType.set(authTypeEnum.login)" label="Log in"
+                    severity="contrast"
+                    styleClass="w-full mb-2 p-3"/>
+        </div>
+      </div>
+      <div class="{{otpLoginStep == optLoginSteps.VerifyOTP ? '':'hidden'}}">
+        <h2 class="text-start">Enter the 4-digit code sent to you at: {{ otpLoginFC.formattedPhoneNumber.value }}</h2>
+        <div class="w-full mb-4">
+          <p-inputOtp [(ngModel)]="loginOtp" [integerOnly]="true"/>
+        </div>
+        <div class="flex justify-content-space-between continue-button">
+          <button (click)="otpLoginStep = optLoginSteps.VerifyPhoneNumber" [disabled]="loading()"
+                  class="p-button-secondary"
+                  pButton
+                  type="button">
+            <span class="rotate-180">➔</span> &nbsp;
+            Back
+          </button>
+
+          <button
+            (click)="validateLoginOtp()"
+            [disabled]="loginOtp.length < 4 || loading()"
+            [loading]="loading()"
+            class="p-button-contrast"
+            pButton
+            type="button">
+            @if (loading()) {
+              &nbsp;
+            }
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+}
+
+<ng-template #googleSignInTemplate>
+  <div (callback)="googleSignIn($event)" appGoogleSignIn class="{{loading() ? 'app-disabled' :''}}"
+       style="text-align:-webkit-center">
+  </div>
+  <!--  <p-button [disabled]="loading"-->
+  <!--            [outlined]="true" appGoogleSignIn icon="pi pi-google"-->
+  <!--            label="Continue with Google"-->
+  <!--            severity="contrast"-->
+  <!--            styleClass="w-full mb-2 p-3"/>-->
+</ng-template>
