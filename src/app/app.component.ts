@@ -41,7 +41,7 @@ export class AppComponent implements OnInit {
   signalRService = inject(SignalRService);
   mapDirectionsService = inject(MapDirectionsService);
   router = inject(Router);
-  bookingId: string;
+  bookingId: string = '';
   loading = false;
   bookingInfo!: BookingInterface;
   hasBooking = false;
@@ -66,7 +66,7 @@ export class AppComponent implements OnInit {
       new google.maps.LatLng(50.4154, -4.0546)
     ), componentRestrictions: {country: 'GB'}
   };
-  viaPoints: ViaPointsDTO[];
+  viaPoints: ViaPointsDTO[] = [];
   menuItems = [{
     label: 'Logout',
     icon: 'pi pi-sign-out',
