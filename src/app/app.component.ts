@@ -294,7 +294,12 @@ export class AppComponent implements OnInit {
 
         if (r.distance) {
           totalDistance += r.distance.value;
-          totalMiles += parseFloat(r.distance.text);
+
+          if (r.distance.text.includes('ft')) {
+            totalMiles += parseFloat(this.feetToMiles(parseFloat(r.distance.text)).toFixed(2));
+          } else if (r.distance.text.includes('mi')) {
+            totalMiles += parseFloat(r.distance.text);
+          }
         }
       });
 
@@ -312,4 +317,8 @@ export class AppComponent implements OnInit {
     }
   }
 
+  private feetToMiles(feet: number) {
+    const feetPerMile = 5280;
+    return feet / feetPerMile;
+  }
 }
