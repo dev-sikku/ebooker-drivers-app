@@ -21,30 +21,34 @@ export class BookingService {
     return lastValueFrom(this.http.Get(API_ENDPOINT.bookingDetails + '?id=' + id));
   }
 
-  addWaitingTime(id: string, time: number, waitingPrice: number, newPrice: number) {
+  addWaitingTime(id: string, time: number, waitingPrice: number, newPrice: number, paymentId: string) {
     return lastValueFrom(this.http.Post(API_ENDPOINT.addWaitingTime, {
       Id: id,
       Time: time,
       NewPrice: newPrice,
-      WaitingPrice: waitingPrice
+      WaitingPrice: waitingPrice,
+      PaymentId: paymentId
     }));
   }
 
-  changeDropOff(id: string, dropOff: string, dropOffLat: number, dropOffLng: number, newPrice: number) {
+  changeDropOff(id: string, oldDropOff: string, dropOff: string, dropOffLat: number, dropOffLng: number, newPrice: number, paymentId: string) {
     return lastValueFrom(this.http.Post(API_ENDPOINT.updateDropOff, {
       Id: id,
       DropOff: dropOff,
       DropOffLat: dropOffLat,
       DropOffLng: dropOffLng,
-      NewPrice: newPrice
+      NewPrice: newPrice,
+      OldDropOff: oldDropOff,
+      PaymentId: paymentId
     }));
   }
 
-  addVia(id: string, viaPoints: ViaPointsDTO[], newPrice: number) {
+  addVia(id: string, viaPoints: ViaPointsDTO[], newPrice: number, paymentId: string) {
     return lastValueFrom(this.http.Post(API_ENDPOINT.addVia, {
       Id: id,
       ViaPoints: viaPoints,
-      NewPrice: newPrice
+      NewPrice: newPrice,
+      PaymentId: paymentId
     }));
   }
 

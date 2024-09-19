@@ -230,8 +230,9 @@ export interface ZoneCoordinatesDTO {
 }
 
 export interface ViaPointsDTO {
-  type: string,
-  address: string,
-  lat: string,
-  lng: string
+  type: string;
+  address: string;
+  lat: string;
+  lng: string;
+  isNew: boolean;
 }

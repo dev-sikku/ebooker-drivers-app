@@ -44,7 +44,7 @@ export class AppComponent implements OnInit {
   bookingId: string = '';
   loading = false;
   bookingInfo!: BookingInterface;
-  hasBooking = false;
+  bookingMessage = '';
   addWaiting = false;
   waitingTime: number;
   updating = false;
@@ -82,30 +82,35 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     this.signalRService.startConnection();
-    this.signalRService.hubConnection.on('PaymentReceived', async (action) => {
+    this.signalRService.hubConnection.on('PaymentReceived', async (action, paymentId) => {
       this.showWaitingPopup = false;
       this.updating = true;
 
       if (action == UpdateBookingActionsEnum.WaitingTime) {
-        const res = await this.bookingService.addWaitingTime(this.bookingId, this.waitingTime, this.waitingTimePrice, this.newPrice);
+        const res = await this.bookingService.addWaitingTime(this.bookingId, this.waitingTime, this.waitingTimePrice, this.newPrice, paymentId);
         if (res.isSuccessful) {
           await this.reload();
+          this.waitingTime = 0;
           this.messageService.add({severity: 'success', summary: 'Waiting time added successfully'});
         } else {
           this.messageService.add({severity: 'error', summary: res.response || 'Something went wrong'});
         }
       } else if (action == UpdateBookingActionsEnum.AddingVia) {
-        const res = await this.bookingService.addVia(this.bookingId, this.viaPoints, this.newPrice);
+        const res = await this.bookingService.addVia(this.bookingId, this.viaPoints, this.newPrice, paymentId);
         if (res.isSuccessful) {
           await this.reload();
+          this.viaPoints = [];
           this.messageService.add({severity: 'success', summary: 'Via point added successfully'});
         } else {
           this.messageService.add({severity: 'error', summary: res.response || 'Something went wrong'});
         }
       } else if (action == UpdateBookingActionsEnum.ChangeDropOff) {
-        const res = await this.bookingService.changeDropOff(this.bookingId, this.dropOff, this.dropOffLat, this.dropOffLng, this.newPrice);
+        const res = await this.bookingService.changeDropOff(this.bookingId, this.bookingInfo.booking.dropoff_address || '', this.dropOff, this.dropOffLat, this.dropOffLng, this.newPrice, paymentId);
         if (res.isSuccessful) {
           await this.reload();
+          this.dropOff = '';
+          this.dropOffLng = 0;
+          this.dropOffLat = 0;
           this.messageService.add({severity: 'success', summary: 'Drop off updated successfully'});
         } else {
           this.messageService.add({severity: 'error', summary: res.response || 'Something went wrong'});
@@ -122,8 +127,11 @@ export class AppComponent implements OnInit {
       const res = await this.bookingService.getBookingDetails(this.bookingId);
       this.loading = false;
       if (res.isSuccessful) {
+        this.bookingMessage = '';
         this.bookingInfo = res.response as BookingInterface;
         this.viaPoints = this.bookingInfo.booking.journey_waypoints?.length ? JSON.parse(this.bookingInfo.booking.journey_waypoints) : [];
+      } else {
+        this.bookingMessage = 'No booking found';
       }
     }
   }
@@ -175,6 +183,7 @@ export class AppComponent implements OnInit {
         address: this.via,
         lat: this.viaLat.toString(),
         lng: this.viaLng.toString(),
+        isNew: true
       })
     }
     const dirInfo = await this.getDirections(pickupLat, pickupLng, dropOffLat, dropOffLng, this.viaPoints || []);
@@ -219,6 +228,15 @@ export class AppComponent implements OnInit {
         summary: 'Invalid via location. Please select a via point from the dropdown list'
       });
     }
+  }
+
+  async reload() {
+    this.addWaiting = false;
+    this.changeDropOff = false;
+    this.addVia = false;
+    this.newPrice = 0;
+    this.priceDiff = 0;
+    await this.searchBooking();
   }
 
   private formatAddress(place: any) {
@@ -292,13 +310,6 @@ export class AppComponent implements OnInit {
         distanceMiles: totalMiles + ' mi',
       };
     }
-  }
-
-  private async reload() {
-    this.addWaiting = false;
-    this.changeDropOff = false;
-    this.addVia = false;
-    await this.searchBooking();
   }
 
 }
