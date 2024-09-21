@@ -1,4 +1,4 @@
-import {Component, inject, OnInit} from '@angular/core';
+import {Component, inject, OnInit, signal} from '@angular/core';
 import {Router, RouterOutlet} from '@angular/router';
 import {ToastModule} from "primeng/toast";
 import {ConfirmDialogModule} from "primeng/confirmdialog";
@@ -47,19 +47,17 @@ export class AppComponent implements OnInit {
   bookingMessage = '';
   addWaiting = false;
   waitingTime: number;
-  updating = false;
   changeDropOff = false;
   dropOff: string;
   dropOffLat: number;
   dropOffLng: number;
   addVia = false;
-  via: string;
-  viaLat: number;
-  viaLng: number;
+  newViaPoints: ViaPointsDTO[] = [];
   showWaitingPopup = false;
   priceDiff = 0;
   newPrice = 0;
-  calculating = false;
+  calculating = signal(false);
+  updating = signal(false);
   autoCompleteOpts = {
     bounds: new google.maps.LatLngBounds(
       new google.maps.LatLng(50.3658, -4.1425),
@@ -76,6 +74,18 @@ export class AppComponent implements OnInit {
     }
   }];
 
+  get validNewViaPts() {
+    return (this.newViaPoints || []).filter(x => x.address);
+  }
+
+  get validViaPts() {
+    return (this.viaPoints || []).filter(x => x.address);
+  }
+
+  get totalViaPts() {
+    return this.validViaPts.concat(this.validNewViaPts);
+  }
+
   get waitingTimePrice() {
     return (this.waitingTime || 0) * this.perMinute;
   }
@@ -84,7 +94,7 @@ export class AppComponent implements OnInit {
     this.signalRService.startConnection();
     this.signalRService.hubConnection.on('PaymentReceived', async (action, paymentId) => {
       this.showWaitingPopup = false;
-      this.updating = true;
+      this.updating.set(true);
 
       if (action == UpdateBookingActionsEnum.WaitingTime) {
         const res = await this.bookingService.addWaitingTime(this.bookingId, this.waitingTime, this.waitingTimePrice, this.newPrice, paymentId);
@@ -96,10 +106,11 @@ export class AppComponent implements OnInit {
           this.messageService.add({severity: 'error', summary: res.response || 'Something went wrong'});
         }
       } else if (action == UpdateBookingActionsEnum.AddingVia) {
-        const res = await this.bookingService.addVia(this.bookingId, this.viaPoints, this.newPrice, paymentId);
+        const res = await this.bookingService.addVia(this.bookingId, this.totalViaPts, this.newPrice, paymentId);
         if (res.isSuccessful) {
           await this.reload();
           this.viaPoints = [];
+          this.newViaPoints = [];
           this.messageService.add({severity: 'success', summary: 'Via point added successfully'});
         } else {
           this.messageService.add({severity: 'error', summary: res.response || 'Something went wrong'});
@@ -117,7 +128,7 @@ export class AppComponent implements OnInit {
         }
       }
 
-      this.updating = false;
+      this.updating.set(false);
     });
   }
 
@@ -136,22 +147,42 @@ export class AppComponent implements OnInit {
     }
   }
 
-  onAddressInput(data: any, type: 'd' | 'v') {
+  onAddressInput(data: any, type: 'd' | 'v', index: number) {
     if (type == 'd') {
       this.dropOff = '';
       this.dropOffLat = 0;
       this.dropOffLng = 0;
     }
     if (type == 'v') {
-      this.via = '';
-      this.viaLat = 0;
-      this.viaLng = 0;
+      let viaPt = this.newViaPoints[index];
+      if (viaPt) {
+        viaPt.address = '';
+        viaPt.lat = '';
+        viaPt.lng = '';
+      }
     }
   }
 
-  async onAddressChange(place: any, type: 'd' | 'v') {
-    this.updating = true;
-    this.calculating = true;
+  addMoreVia() {
+    this.newViaPoints.push({
+      isNew: true,
+      lat: '',
+      lng: '',
+      type: 'w',
+      address: ''
+    });
+  }
+
+  async removeVia(index: number) {
+    this.newViaPoints.splice(index, 1);
+    if (this.validNewViaPts.length) {
+      await this.calculatePrice();
+    }
+  }
+
+  async onAddressChange(place: any, type: 'd' | 'v', index: number) {
+    this.updating.set(true);
+    this.calculating.set(true);
 
     const data = {
       address: this.formatAddress(place),
@@ -166,32 +197,15 @@ export class AppComponent implements OnInit {
     }
 
     if (type == 'v') {
-      this.via = data.address;
-      this.viaLat = data.lat;
-      this.viaLng = data.lng;
+      let viaPt = this.newViaPoints[index];
+      if (viaPt) {
+        viaPt.address = data.address;
+        viaPt.lat = data.lat;
+        viaPt.lng = data.lng;
+      }
     }
 
-
-    const pickupLat = parseFloat(this.bookingInfo.booking.pickup_lat || '');
-    const pickupLng = parseFloat(this.bookingInfo.booking.pickup_lng || '');
-    const dropOffLat = this.dropOffLat || parseFloat(this.bookingInfo.booking.dropoff_lat || '');
-    const dropOffLng = this.dropOffLng || parseFloat(this.bookingInfo.booking.dropoff_lng || '');
-    if (this.via && this.viaLat != 0 && this.viaLng != 0) {
-      this.viaPoints ||= [];
-      this.viaPoints.push({
-        type: 'w',
-        address: this.via,
-        lat: this.viaLat.toString(),
-        lng: this.viaLng.toString(),
-        isNew: true
-      })
-    }
-    const dirInfo = await this.getDirections(pickupLat, pickupLng, dropOffLat, dropOffLng, this.viaPoints || []);
-    const fare = this.bookingService.calculateFare(dirInfo.distanceMiles, this.bookingInfo.priceRule.tiers, this.bookingInfo.priceRule.timeFrames, this.bookingInfo.priceRule.zones, new Date(this.bookingInfo.booking.pickup_time || ''), this.dropOffLat, this.dropOffLng) || 0;
-    this.newPrice = fare + (this.bookingInfo.bookingCharge.extra_waiting_time || 0);
-    this.priceDiff = this.newPrice - (this.bookingInfo.bookingCharge.total_journey || 0);
-    this.updating = false;
-    this.calculating = false;
+    await this.calculatePrice();
   }
 
   async addWaitingTime() {
@@ -220,7 +234,7 @@ export class AppComponent implements OnInit {
   }
 
   async addViaAddress() {
-    if (this.via?.length && this.viaLat != 0 && this.viaLng != 0) {
+    if (this.validNewViaPts.length) {
       await this.generatePaymentLink('Via Point', UpdateBookingActionsEnum.AddingVia);
     } else {
       this.messageService.add({
@@ -230,6 +244,34 @@ export class AppComponent implements OnInit {
     }
   }
 
+  enableAddVia() {
+    this.addWaiting = false;
+    this.changeDropOff = false;
+    this.addVia = true;
+    this.newPrice = 0;
+    this.priceDiff = 0;
+    this.newViaPoints = [];
+    this.addMoreVia();
+  }
+
+  enableAddWaiting() {
+    this.addWaiting = true;
+    this.changeDropOff = false;
+    this.addVia = false;
+    this.newPrice = 0;
+    this.priceDiff = 0;
+    this.newViaPoints = [];
+  }
+
+  enableChangeDropOff() {
+    this.addWaiting = false;
+    this.changeDropOff = true;
+    this.addVia = false;
+    this.newPrice = 0;
+    this.priceDiff = 0;
+    this.newViaPoints = [];
+  }
+
   async reload() {
     this.addWaiting = false;
     this.changeDropOff = false;
@@ -237,6 +279,19 @@ export class AppComponent implements OnInit {
     this.newPrice = 0;
     this.priceDiff = 0;
     await this.searchBooking();
+  }
+
+  private async calculatePrice() {
+    const pickupLat = parseFloat(this.bookingInfo.booking.pickup_lat || '');
+    const pickupLng = parseFloat(this.bookingInfo.booking.pickup_lng || '');
+    const dropOffLat = this.dropOffLat || parseFloat(this.bookingInfo.booking.dropoff_lat || '');
+    const dropOffLng = this.dropOffLng || parseFloat(this.bookingInfo.booking.dropoff_lng || '');
+    const dirInfo = await this.getDirections(pickupLat, pickupLng, dropOffLat, dropOffLng, this.totalViaPts);
+    const fare = this.bookingService.calculateFare(dirInfo.distanceMiles, this.bookingInfo.priceRule.tiers, this.bookingInfo.priceRule.timeFrames, this.bookingInfo.priceRule.zones, new Date(this.bookingInfo.booking.pickup_time || ''), this.dropOffLat, this.dropOffLng) || 0;
+    this.newPrice = fare + (this.bookingInfo.bookingCharge.extra_waiting_time || 0);
+    this.priceDiff = this.newPrice - (this.bookingInfo.bookingCharge.total_journey || 0);
+    this.updating.set(false);
+    this.calculating.set(false);
   }
 
   private formatAddress(place: any) {
@@ -251,9 +306,9 @@ export class AppComponent implements OnInit {
         return;
       }
 
-      this.updating = true;
+      this.updating.set(true);
       const res = await this.bookingService.generatePaymentLink(this.priceDiff.toFixed(1), this.bookingId, readableAction, action, this.bookingInfo.booking.passenger_name || '', this.bookingInfo.booking.passenger_mobile || '');
-      this.updating = false;
+      this.updating.set(false);
       if (res.isSuccessful) {
         this.showWaitingPopup = true;
       } else {
@@ -280,7 +335,7 @@ export class AppComponent implements OnInit {
       waypoints: waypoints,
       travelMode: google.maps.TravelMode.DRIVING,
       unitSystem: google.maps.UnitSystem.IMPERIAL
-    })); //.pipe(map(response => response.result));
+    }));
 
     let totalDuration = 0;
     let totalDistance = 0;
