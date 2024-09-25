@@ -1,0 +1,230 @@
+<p-toolbar
+  [style]="{ 'border-radius': '0','border':0, 'background-color': '#0E3E71','color':'white' }">
+  <ng-template pTemplate="start">
+    <div class="flex align-items-center gap-2">
+      <div class="logo">
+        <img alt="logo" src="../assets/logo.png" width="150"/>
+      </div>
+    </div>
+  </ng-template>
+  <ng-template pTemplate="end">
+    <div class="flex white-space-nowrap">
+      <p-menu #menu [model]="[{
+           label: (authService.getUserModal().firstName || '') + ' ' + (authService.getUserModal().lastName || ''),
+           icon: 'pi pi-user',
+           items: menuItems
+         }]" [popup]="true"/>
+      <p-button (onClick)="menu.toggle($event)" [label]="(authService.getUserModal().firstName || '') + ' ' + (authService.getUserModal().lastName || '')" [rounded]="true"
+                icon="pi pi-user"
+                severity="contrast"/>
+    </div>
+  </ng-template>
+</p-toolbar>
+
+<div class="text-center col-12 md:col-12 p-5">
+  <p-card styleClass="p-5">
+    <h1>Welcome, please type booking ref number</h1>
+    <p-inputGroup>
+      <input [(ngModel)]="bookingId" pInputText type="text"/>
+      <button (click)="reload()" [disabled]="loading || (bookingId.trim().length || 0) == 0"
+              [loading]="loading"
+              label="Search" pButton severity="contrast"
+              type="button"></button>
+    </p-inputGroup>
+
+    <div class="flex flex-column mt-5 md:mt-0">
+      @if (bookingMessage.length) {
+        <p-divider/>
+        <div class="text-2xl font-semibold mb-3">{{ bookingMessage }}</div>
+      } @else if (bookingInfo) {
+        <p-divider/>
+        <div class="mt-5">
+          <div class="text-2xl font-semibold mb-3">Booking details</div>
+          <div class="flex flex-column">
+            <div class="flex justify-content-between align-items-center mb-2">
+              <span class="font-semibold mr-6">Booking date & time</span>
+              <span>{{ bookingInfo.booking.pickup_time }}</span>
+            </div>
+            <div class="flex justify-content-between align-items-center mb-2">
+              <span class="font-semibold mr-6">Pick up address</span>
+              <span>{{ bookingInfo.booking.pickup_address }}</span>
+            </div>
+            <div class="flex justify-content-between align-items-center mb-2">
+              <span class="font-semibold mr-6">Drop off address</span>
+              <span>{{ bookingInfo.booking.dropoff_address }}</span>
+            </div>
+            @if (viaPoints.length) {
+              <div class="flex justify-content-between align-items-center mb-2">
+                <span class="font-semibold mr-6">Via</span>
+                <div class="text-end">
+                  @for (via of viaPoints; track $index) {
+                    <span class="block">{{ via.address || '' }}</span>
+                  }
+                </div>
+              </div>
+            }
+            <div class="flex justify-content-between align-items-center mb-2">
+              <span class="font-semibold mr-6">Price</span>
+              <span>£{{ bookingInfo.bookingCharge.total_journey }}</span>
+            </div>
+            @if (bookingInfo.booking.waiting_time) {
+              <div class="flex justify-content-between align-items-center mb-2">
+                <span class="font-semibold mr-6">Waiting time</span>
+                <span>{{ bookingInfo.booking.waiting_time }}</span>
+              </div>
+            }
+
+          </div>
+        </div>
+
+        @if ((bookingInfo.booking.status || '').toLowerCase() == 'pob' && (bookingInfo.booking.payment_method || '').toLowerCase() == 'braintree') {
+
+          <div class="mt-5">
+            <div class="text-2xl font-semibold mb-3">Please choose what would you like to change?</div>
+            <div class="flex justify-content-center gap-2">
+              <button (click)="enableAddWaiting()"
+                      label="Add waiting"
+                      severity="contrast" pButton
+                      type="button"></button>
+              <button
+                (click)="enableAddVia()"
+                label="Add via"
+                severity="contrast" pButton
+                type="button"></button>
+              <button (click)="enableChangeDropOff()"
+                      label="Change drop off"
+                      severity="contrast"
+                      pButton
+                      type="button"></button>
+            </div>
+          </div>
+
+          @if (addWaiting) {
+            <p-divider/>
+            <div class="mt-5">
+              <div class="text-2xl font-semibold mb-3">Please add waiting time in minutes</div>
+              <p>The system will recalculate the fare</p>
+              <p-inputNumber
+                class="w-full"
+                styleClass="w-full"
+                [(ngModel)]="waitingTime"
+                suffix=" minutes"/>
+              @if (waitingTimePrice > 0) {
+                <div class="py-1 my-1 text-start">
+                  <span class="block font-semibold py-1">Waiting Price: £{{ waitingTimePrice.toFixed(1) }}</span>
+                </div>
+              }
+              <div class="flex justify-content-center gap-2 mt-3">
+                <button (click)="addWaitingTime()" [loading]="updating()" [disabled]="updating()"
+                        label="Add minutes"
+                        severity="contrast" pButton
+                        type="button"></button>
+              </div>
+            </div>
+          }
+
+          @if (changeDropOff) {
+            <p-divider/>
+            <div class="mt-5">
+              <div class="text-2xl font-semibold mb-3">Change drop off</div>
+              <p>The system will recalculate the fare</p>
+              <input (input)="onAddressInput($event,'d',0)"
+                     appGoogleAddressAutoComplete
+                     placeholder="Type drop off address"
+                     [configs]="autoCompleteOpts"
+                     class="w-full"
+                     (addressChange)="onAddressChange($event,'d',0)"
+                     type="text" pInputText/>
+
+              <div class="py-1 my-1 text-start">
+                @if (newPrice) {
+                  <span class="block font-semibold py-1">New Price: £{{ newPrice.toFixed(1) }}</span>
+                }
+                @if (priceDiff) {
+                  <span class="block font-semibold">Price difference: £{{ priceDiff.toFixed(1) }}</span>
+                }
+              </div>
+
+              <div class="flex justify-content-center gap-2 mt-3">
+                <button (click)="changeDropOffAddress()" [loading]="updating()" [disabled]="updating()"
+                        [label]="calculating() ? 'Calculating Price' : 'Update'"
+                        severity="contrast" pButton
+                        type="button"></button>
+              </div>
+            </div>
+          }
+
+          @if (addVia) {
+            <p-divider/>
+            <div class="mt-5">
+              <div class="text-2xl font-semibold mb-3">Add VIA</div>
+              <p>The system will recalculate the fare</p>
+              <div class="flex justify-content-end mb-3">
+                <p-button (onClick)="addMoreVia()" [label]="newViaPoints.length == 0 ? 'Add via':'Add more via'"
+                          [size]="'small'" [rounded]="true"
+                          severity="contrast"/>
+              </div>
+              @for (via of newViaPoints; track $index) {
+                <div class="py-2">
+                  <p-inputGroup>
+                    <input (input)="onAddressInput($event,'v',$index)"
+                           appGoogleAddressAutoComplete
+                           [configs]="autoCompleteOpts"
+                           placeholder="Type via address"
+                           (addressChange)="onAddressChange($event,'v',$index)"
+                           class="w-full"
+                           type="text" pInputText/>
+                    <button (click)="removeVia($index)" type="button" pButton icon="pi pi-times"
+                            class="p-button-danger"></button>
+                  </p-inputGroup>
+                </div>
+              }
+
+              @if (newViaPoints.length) {
+                <div class="py-1 my-1 text-start">
+                  @if (newPrice) {
+                    <span class="block font-semibold py-1">New Price: £{{ newPrice.toFixed(1) }}</span>
+                  }
+                  @if (priceDiff) {
+                    <span class="block font-semibold">Price difference: £{{ priceDiff.toFixed(1) }}</span>
+                  }
+                </div>
+              }
+              <div class="flex justify-content-center gap-2 mt-3">
+                <button (click)="addViaAddress()" [loading]="updating()" [disabled]="updating()"
+                        [label]="calculating() ? 'Calculating Price' : 'Add'"
+                        severity="contrast" pButton
+                        type="button"></button>
+              </div>
+            </div>
+          }
+
+        } @else {
+          <div class="text-2xl font-semibold mb-3 text-danger">Sorry, but you cannot make any changes to this
+            booking.
+          </div>
+        }
+      }
+    </div>
+  </p-card>
+</div>
+
+<p-sidebar [(visible)]="showWaitingPopup" [fullScreen]="true" [showCloseIcon]="false">
+  <ng-template pTemplate="header">
+            <span class="m-auto text-center font-semibold text-xl">
+              Waiting for the payment
+    <p-progressSpinner
+      animationDuration=".5s"
+      fill="var(--surface-ground)"
+      strokeWidth="8"
+      styleClass="w-2rem h-2rem"/>
+
+            </span>
+  </ng-template>
+  <p>
+    A payment link has been sent to the customer via SMS and email.
+    Please ask the customer to check their phone and make the payment. Once the payment is completed, your job will be
+    updated automatically.
+  </p>
+  <p-button (onClick)="showWaitingPopup = false" label="Cancel" severity="contrast"/>
+</p-sidebar>

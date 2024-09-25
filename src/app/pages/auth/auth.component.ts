@@ -8,7 +8,7 @@ import {MessageService} from "primeng/api";
 import {ToastModule} from "primeng/toast";
 import {StyleClassModule} from "primeng/styleclass";
 import {NgTemplateOutlet} from "@angular/common";
-import {ActivatedRoute} from "@angular/router";
+import {ActivatedRoute, Router} from "@angular/router";
 import {IntelPhoneFormatterDirective} from "../../shared/directives/intel-phone-formatter.directive";
 import {GoogleSignInDirective} from "../../shared/directives/google-sign-in.directive";
 import {AuthTypeEnum} from "../../shared/enums/auth-type.enum";
@@ -45,6 +45,7 @@ export class AuthComponent implements OnInit {
   authService = inject(AuthService);
   cdr = inject(ChangeDetectorRef);
   activatedRoute = inject(ActivatedRoute);
+  route = inject(Router);
   loginForm = new FormGroup({
     phoneNumber: new FormControl('', [Validators.required]),
     formattedPhoneNumber: new FormControl(''),
@@ -162,7 +163,7 @@ export class AuthComponent implements OnInit {
     });
     this.loading.set(false);
     if (res && res.isSuccessful) {
-      this.markCompleted(res.response);
+      await this.markCompleted(res.response);
     } else {
       this.messageService.add({severity: 'error', summary: res.response || 'Something went wrong'});
     }
@@ -190,7 +191,7 @@ export class AuthComponent implements OnInit {
       const res = await this.authService.validateLoginOtp(this.otpLoginForm.controls.formattedPhoneNumber.value || '', this.loginOtp);
       this.loading.set(false);
       if (res && res.isSuccessful) {
-        this.markCompleted(res.response)
+        await this.markCompleted(res.response)
       } else {
         this.messageService.add({severity: 'error', summary: res.response || 'Something went wrong'});
       }
@@ -207,7 +208,7 @@ export class AuthComponent implements OnInit {
       });
       this.loading.set(false);
       if (res && res.isSuccessful) {
-        this.markCompleted(res.response)
+        await this.markCompleted(res.response)
       } else {
         this.messageService.add({severity: 'error', summary: res.response || 'Something went wrong'});
       }
@@ -221,17 +222,19 @@ export class AuthComponent implements OnInit {
       const res = await this.authService.googleSignIn(response.credential);
       this.loading.set(false);
       if (res && res.isSuccessful) {
-        this.markCompleted(res.response)
+        await this.markCompleted(res.response)
       } else {
         this.messageService.add({severity: 'error', summary: res.response || 'Something went wrong'});
       }
     }
   }
 
-  private markCompleted(token: string) {
+  private async markCompleted(token: string) {
     localStorage.setItem('token', token);
     this.completed.set(true);
     this.close.emit();
+    const returnUrl = this.activatedRoute.snapshot.queryParamMap.get('returnUrl') || '/';
+    await this.route.navigateByUrl(returnUrl);
   }
 
 
