@@ -2,6 +2,7 @@ import {environment} from "../../environments/environment";
 
 export const API_ENDPOINT = {
   bookingDetails: environment.apiUrl + 'api/drivers/booking-details/',
+  updateBooking: environment.apiUrl + 'api/drivers/update/',
   addWaitingTime: environment.apiUrl + 'api/drivers/add-waiting-time/',
   updateDropOff: environment.apiUrl + 'api/drivers/update-drop-off/',
   addVia: environment.apiUrl + 'api/drivers/add-via/',
