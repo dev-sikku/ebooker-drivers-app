@@ -14,7 +14,9 @@
            icon: 'pi pi-user',
            items: menuItems
          }]" [popup]="true"/>
-      <p-button (onClick)="menu.toggle($event)" [label]="(authService.getUserModal().firstName || '') + ' ' + (authService.getUserModal().lastName || '')" [rounded]="true"
+      <p-button (onClick)="menu.toggle($event)"
+                [label]="(authService.getUserModal().firstName || '') + ' ' + (authService.getUserModal().lastName || '')"
+                [rounded]="true"
                 icon="pi pi-user"
                 severity="contrast"/>
     </div>
@@ -99,7 +101,7 @@
             </div>
           </div>
 
-          @if (addWaiting) {
+          <div class="{{addWaiting ? '' : 'hidden'}}">
             <p-divider/>
             <div class="mt-5">
               <div class="text-2xl font-semibold mb-3">Please add waiting time in minutes</div>
@@ -109,52 +111,30 @@
                 styleClass="w-full"
                 [(ngModel)]="waitingTime"
                 suffix=" minutes"/>
-              @if (waitingTimePrice > 0) {
-                <div class="py-1 my-1 text-start">
-                  <span class="block font-semibold py-1">Waiting Price: £{{ waitingTimePrice.toFixed(1) }}</span>
-                </div>
-              }
-              <div class="flex justify-content-center gap-2 mt-3">
-                <button (click)="addWaitingTime()" [loading]="updating()" [disabled]="updating()"
-                        label="Add minutes"
-                        severity="contrast" pButton
-                        type="button"></button>
-              </div>
             </div>
-          }
+          </div>
 
-          @if (changeDropOff) {
+          <div class="{{changeDropOff ? '' : 'hidden'}}">
             <p-divider/>
             <div class="mt-5">
               <div class="text-2xl font-semibold mb-3">Change drop off</div>
               <p>The system will recalculate the fare</p>
-              <input (input)="onAddressInput($event,'d',0)"
-                     appGoogleAddressAutoComplete
-                     placeholder="Type drop off address"
-                     [configs]="autoCompleteOpts"
-                     class="w-full"
-                     (addressChange)="onAddressChange($event,'d',0)"
-                     type="text" pInputText/>
-
-              <div class="py-1 my-1 text-start">
-                @if (newPrice) {
-                  <span class="block font-semibold py-1">New Price: £{{ newPrice.toFixed(1) }}</span>
-                }
-                @if (priceDiff) {
-                  <span class="block font-semibold">Price difference: £{{ priceDiff.toFixed(1) }}</span>
-                }
-              </div>
-
-              <div class="flex justify-content-center gap-2 mt-3">
-                <button (click)="changeDropOffAddress()" [loading]="updating()" [disabled]="updating()"
-                        [label]="calculating() ? 'Calculating Price' : 'Update'"
-                        severity="contrast" pButton
-                        type="button"></button>
-              </div>
+              <p-inputGroup>
+                <input (input)="onAddressInput($event,'d',0)"
+                       appGoogleAddressAutoComplete
+                       placeholder="Type drop off address"
+                       [configs]="autoCompleteOpts"
+                       class="w-full"
+                       #dropOffInput
+                       (addressChange)="onAddressChange($event,'d',0)"
+                       type="text" pInputText/>
+                <button (click)="clearDropOff(dropOffInput)" type="button" pButton icon="pi pi-times"
+                        class="p-button-danger"></button>
+              </p-inputGroup>
             </div>
-          }
+          </div>
 
-          @if (addVia) {
+          <div class="{{addVia ? '' : 'hidden'}}">
             <p-divider/>
             <div class="mt-5">
               <div class="text-2xl font-semibold mb-3">Add VIA</div>
@@ -179,23 +159,71 @@
                   </p-inputGroup>
                 </div>
               }
+            </div>
+          </div>
 
-              @if (newViaPoints.length) {
-                <div class="py-1 my-1 text-start">
-                  @if (newPrice) {
-                    <span class="block font-semibold py-1">New Price: £{{ newPrice.toFixed(1) }}</span>
+
+          @if (hasValidWaitingTime || hasValidDropOff || validNewViaPts.length) {
+            <p-divider/>
+            <div class="mt-5">
+              <div class="text-2xl font-semibold mb-3">Change Summary {{ createActionString() }}</div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full" style="border-collapse: collapse; table-layout: auto;">
+                <thead>
+                <tr>
+                  <th class="text-left font-semibold py-3 border-bottom-1 surface-border white-space-nowrap">
+                    Description
+                  </th>
+                  <th class="text-right font-semibold py-3 border-bottom-1 surface-border white-space-nowrap px-3">
+                    Change
+                  </th>
+                </tr>
+                </thead>
+                <tbody>
+                  @if (hasValidWaitingTime) {
+                    <tr>
+                      <td class="text-left py-3 border-bottom-1 surface-border white-space-nowrap">Waiting time</td>
+                      <td class="text-right py-3 border-bottom-1 surface-border px-3">{{ waitingTime }} minutes</td>
+                    </tr>
                   }
-                  @if (priceDiff) {
-                    <span class="block font-semibold">Price difference: £{{ priceDiff.toFixed(1) }}</span>
+                  @if (hasValidDropOff) {
+                    <tr>
+                      <td class="text-left py-3 border-bottom-1 surface-border white-space-nowrap">Drop off</td>
+                      <td class="text-right py-3 border-bottom-1 surface-border px-3">{{ dropOff }}</td>
+                    </tr>
                   }
+
+                  @if (validNewViaPts.length) {
+                    <tr>
+                      <td class="text-left py-3 border-bottom-1 surface-border white-space-nowrap">Via</td>
+                      <td class="text-right py-3 border-bottom-1 surface-border px-3">
+                        @for (via of validNewViaPts; track $index) {
+                          <span class="block">{{ via.address || '' }}</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="flex flex-column md:flex-row md:align-items-start md:justify-content-end my-5">
+              <div class="flex flex-column">
+                <div class="flex justify-content-between align-items-center mb-2">
+                  <span class="font-semibold mr-6">Price difference</span>
+                  <span>£{{ totalPriceDiff.toFixed(1) }}</span>
                 </div>
-              }
-              <div class="flex justify-content-center gap-2 mt-3">
-                <button (click)="addViaAddress()" [loading]="updating()" [disabled]="updating()"
-                        [label]="calculating() ? 'Calculating Price' : 'Add'"
-                        severity="contrast" pButton
-                        type="button"></button>
+                <div class="flex justify-content-between align-items-center">
+                  <span class="font-semibold mr-6">Total Price</span>
+                  <span>£{{ totalPrice.toFixed(1) }}</span>
+                </div>
               </div>
+            </div>
+            <div class="flex justify-content-center gap-2">
+              <button (click)="update($event)" [loading]="updating()" [disabled]="updating()"
+                      [label]="calculating() ? 'Calculating Price' : 'Update & Collect £' + totalPriceDiff.toFixed(1)"
+                      severity="contrast" pButton
+                      type="button"></button>
             </div>
           }
 

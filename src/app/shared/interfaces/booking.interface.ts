@@ -2,6 +2,7 @@ export interface BookingInterface {
   booking: ChargeBookingInfo;
   bookingCharge: ChargeBookingInfoCharge;
   priceRule: PricingDTO;
+  extra: number;
 }
 
 export interface ChargeBookingInfo {

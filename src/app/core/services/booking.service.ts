@@ -21,6 +21,10 @@ export class BookingService {
     return lastValueFrom(this.http.Get(API_ENDPOINT.bookingDetails + '?id=' + id));
   }
 
+  Update(payload: any) {
+    return lastValueFrom(this.http.Post(API_ENDPOINT.updateBooking, payload));
+  }
+
   addWaitingTime(id: string, time: number, waitingPrice: number, newPrice: number, paymentId: string) {
     return lastValueFrom(this.http.Post(API_ENDPOINT.addWaitingTime, {
       Id: id,
@@ -52,19 +56,21 @@ export class BookingService {
     }));
   }
 
-  generatePaymentLink(amt: string, id: string, readableAction: string, action: string, name: string, phoneNumber: string) {
+  generatePaymentLink(syncId: string, id: string, amt: string, action: string, name: string, phoneNumber: string) {
     return lastValueFrom(this.http.Post(API_ENDPOINT.generatePaymentLink, {
       Id: id,
       Amt: amt,
-      ReadableAction: readableAction,
       Action: action,
       Name: name,
-      PhoneNumber: phoneNumber
+      PhoneNumber: phoneNumber,
+      SyncId: syncId
     }));
   }
 
-  calculateFare(distanceMiles: string, pricingTires: PricingTierDTO[], timeFrameTires: PricingTimeFrameDTO[], zones: PricingZoneExtraDTO[], pickupDate: Date, dropOffLat: number, dropOffLng: number) {
+  calculateFare(distanceMiles: string, pricingTires: PricingTierDTO[], timeFrameTires: PricingTimeFrameDTO[], zones: PricingZoneExtraDTO[], pickupDate: Date, extra: number, dropOffLat: number, dropOffLng: number) {
     let fare = this.calculatePrice(parseFloat(distanceMiles), pricingTires);
+
+
     const currentDayName = this.daysOfWeek[pickupDate.getDay()];
     const currentHour = pickupDate.getHours();
     const currentMinute = pickupDate.getMinutes();
@@ -78,6 +84,11 @@ export class BookingService {
       if (zoneExtra) {
         fare = fare + zoneExtra;
       }
+    }
+
+    if (extra) {
+      let amountToAdd = (extra / 100) * fare;
+      fare = fare + amountToAdd;
     }
     return fare;
   }
