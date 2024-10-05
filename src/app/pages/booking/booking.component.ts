@@ -326,7 +326,11 @@ export class BookingComponent implements OnInit {
     const dropOffLat = this.dropOffLat || parseFloat(this.bookingInfo.booking.dropoff_lat || '');
     const dropOffLng = this.dropOffLng || parseFloat(this.bookingInfo.booking.dropoff_lng || '');
     const dirInfo = await this.getDirections(pickupLat, pickupLng, dropOffLat, dropOffLng, this.totalViaPts);
-    let fare = this.bookingService.calculateFare(dirInfo.distanceMiles, this.bookingInfo.priceRule.tiers, this.bookingInfo.priceRule.timeFrames, this.bookingInfo.priceRule.zones, new Date(), this.bookingInfo.extra, this.dropOffLat, this.dropOffLng) || 0;
+    let pickupDate = new Date();
+    if (this.bookingInfo.booking.pickup_time && new Date(this.bookingInfo.booking.pickup_time) > pickupDate) {
+      pickupDate = new Date(this.bookingInfo.booking.pickup_time);
+    }
+    let fare = this.bookingService.calculateFare(dirInfo.distanceMiles, this.bookingInfo.priceRule.tiers, this.bookingInfo.priceRule.timeFrames, this.bookingInfo.priceRule.zones, pickupDate, this.bookingInfo.extra, this.dropOffLat, this.dropOffLng) || 0;
     fare = parseFloat(fare.toFixed(1));
     this.newPrice = fare + (this.bookingInfo.bookingCharge.extra_waiting_time || 0);
     this.priceDiff = this.newPrice - (this.bookingInfo.bookingCharge.total_journey || 0);
