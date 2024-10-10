@@ -85,6 +85,10 @@ export class BookingComponent implements OnInit {
   perMinute = 0.3;
   priceDiff = 0;
   newPrice = 0;
+  basePrice = 0;
+  timeFrameExtra = 0;
+  zoneExtra = 0;
+  adminExtra = 0;
 
   get hasValidDropOff() {
     return this.dropOff.length && this.dropOffLat != 0 && this.dropOffLng != 0;
@@ -137,7 +141,11 @@ export class BookingComponent implements OnInit {
           waitingPrice: this.waitingTimePrice + (this.bookingInfo.bookingCharge.extra_waiting_time || 0),
           newWaitingTime: (this.waitingTime || 0),
           newWaitingPrice: this.waitingTimePrice,
-          Price: this.totalPrice
+          price: this.totalPrice,
+          basePrice: this.basePrice,
+          timeFrameExtra: this.timeFrameExtra,
+          zoneExtra: this.zoneExtra,
+          adminExtra: this.adminExtra
         };
         const res = await this.bookingService.Update(payload);
         if (res.isSuccessful) {
@@ -168,6 +176,10 @@ export class BookingComponent implements OnInit {
         this.bookingInfo = res.response as BookingInterface;
         this.viaPoints = this.bookingInfo.booking.journey_waypoints?.length ? JSON.parse(this.bookingInfo.booking.journey_waypoints) : [];
         this.newPrice = this.bookingInfo.bookingCharge.total_journey || 0;
+        this.basePrice = this.bookingInfo.bookingCharge.base_journey_charge || 0;
+        this.timeFrameExtra = this.bookingInfo.bookingCharge.time_frame || 0;
+        this.zoneExtra = this.bookingInfo.bookingCharge.zone_extra_charge || 0;
+        this.adminExtra = this.bookingInfo.bookingCharge.administration_fee || 0;
       } else {
         this.bookingMessage = 'No booking found';
       }
@@ -330,10 +342,14 @@ export class BookingComponent implements OnInit {
     if (this.bookingInfo.booking.pickup_time && new Date(this.bookingInfo.booking.pickup_time) > pickupDate) {
       pickupDate = new Date(this.bookingInfo.booking.pickup_time);
     }
-    let fare = this.bookingService.calculateFare(dirInfo.distanceMiles, this.bookingInfo.priceRule.tiers, this.bookingInfo.priceRule.timeFrames, this.bookingInfo.priceRule.zones, pickupDate, this.bookingInfo.extra, this.dropOffLat, this.dropOffLng) || 0;
-    fare = parseFloat(fare.toFixed(1));
+    let fareSummary = this.bookingService.calculateFare(dirInfo.distanceMiles, this.bookingInfo.priceRule.tiers, this.bookingInfo.priceRule.timeFrames, this.bookingInfo.priceRule.zones, pickupDate, this.bookingInfo.extra, this.dropOffLat, this.dropOffLng) || 0;
+    let fare = parseFloat(fareSummary.fare.toFixed(1));
     this.newPrice = fare + (this.bookingInfo.bookingCharge.extra_waiting_time || 0);
     this.priceDiff = this.newPrice - (this.bookingInfo.bookingCharge.total_journey || 0);
+    this.basePrice = fareSummary.baseFare;
+    this.timeFrameExtra = fareSummary.tfExtra;
+    this.zoneExtra = fareSummary.zoneExtra;
+    this.adminExtra = fareSummary.extra;
     this.updating.set(false);
     this.calculating.set(false);
   }

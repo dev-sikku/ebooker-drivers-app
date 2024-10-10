@@ -68,29 +68,46 @@ export class BookingService {
   }
 
   calculateFare(distanceMiles: string, pricingTires: PricingTierDTO[], timeFrameTires: PricingTimeFrameDTO[], zones: PricingZoneExtraDTO[], pickupDate: Date, extra: number, dropOffLat: number, dropOffLng: number) {
-    let fare = this.calculatePrice(parseFloat(distanceMiles), pricingTires);
+    let fareSummary = {
+      baseFare: 0,
+      extra: 0,
+      tfExtra: 0,
+      zoneExtra: 0,
+      fare: 0,
+      fareBeforeDisc: 0,
+      discountedValue: 0
+    };
 
+    let fare = this.calculatePrice(parseFloat(distanceMiles), pricingTires);
+    fareSummary.baseFare = fare;
 
     const currentDayName = this.daysOfWeek[pickupDate.getDay()];
     const currentHour = pickupDate.getHours();
     const currentMinute = pickupDate.getMinutes();
     let calTfExtra = this.calculateTfExtra(currentDayName, currentHour, currentMinute, timeFrameTires);
     if (calTfExtra) {
+      fareSummary.baseFare += calTfExtra
+      fareSummary.tfExtra = 0;
       fare = fare + calTfExtra;
     }
 
     if (zones?.length) {
       const zoneExtra = this.calculateZoneExtra(zones, dropOffLat, dropOffLng);
       if (zoneExtra) {
+        fareSummary.zoneExtra = zoneExtra;
         fare = fare + zoneExtra;
       }
     }
 
     if (extra) {
       let amountToAdd = (extra / 100) * fare;
+      fareSummary.extra = amountToAdd;
       fare = fare + amountToAdd;
     }
-    return fare;
+
+    fareSummary.fareBeforeDisc = fare;
+    fareSummary.fare = fare;
+    return fareSummary;
   }
 
   calculateZoneExtra(zones: PricingZoneExtraDTO[], lat: number, lng: number) {
