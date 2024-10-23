@@ -158,8 +158,7 @@ export class BookingComponent implements OnInit {
         this.updating.set(false);
       }
     });
-
-    const id = this.route.snapshot.queryParamMap.get('id') || '';
+    const id = this.route.snapshot.params['id'] || '';
     if (id?.length) {
       this.bookingId = id;
       await this.reload();

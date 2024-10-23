@@ -10,6 +10,12 @@ export const routes: Routes = [
     component: AuthComponent
   },
   {
+    path: 'booking/:id',
+    pathMatch: 'full',
+    canActivate: [authGuard],
+    component: BookingComponent
+  },
+  {
     path: 'booking',
     pathMatch: 'full',
     canActivate: [authGuard],
